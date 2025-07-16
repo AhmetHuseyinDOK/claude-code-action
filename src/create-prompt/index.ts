@@ -42,6 +42,10 @@ export function buildAllowedToolsString(
 
   // Always include the comment update tool from the comment server
   baseTools.push("mcp__github_comment__update_claude_comment");
+  
+  // Always include structured outputs tools
+  baseTools.push("mcp__structured_outputs__set_action_output");
+  baseTools.push("mcp__structured_outputs__set_multiple_action_outputs");
 
   // Add commit signing tools if enabled
   if (useCommitSigning) {
@@ -560,6 +564,22 @@ Tool usage example for mcp__github_comment__update_claude_comment:
 }
 Only the body parameter is required - the tool automatically knows which comment to update.
 </comment_tool_info>`}
+
+${`<structured_outputs_tool_info>
+STRUCTURED OUTPUTS: You have access to tools for setting GitHub Action outputs that subsequent workflow steps can use:
+
+1. mcp__structured_outputs__set_action_output - Set a single output
+   Example: { "key": "file_path", "value": "/path/to/created/file.ts" }
+   → Creates output: claude_file_path (accessible as \${{ steps.step-id.outputs.claude_file_path }})
+
+2. mcp__structured_outputs__set_multiple_action_outputs - Set multiple outputs at once  
+   Example: { "outputs": { "status": "completed", "files_created": "3", "pr_url": "https://..." } }
+   → Creates outputs: claude_status, claude_files_created, claude_pr_url
+
+NOTE: All output keys automatically get a 'claude_' prefix to avoid conflicts with other action outputs.
+
+Use these when the user requests specific outputs, like file paths, URLs, IDs, or status information that should be available to subsequent actions.
+</structured_outputs_tool_info>`}
 
 Your task is to analyze the context, understand the request, and provide helpful responses and/or implement code changes as needed.
 

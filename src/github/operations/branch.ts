@@ -26,8 +26,53 @@ export async function setupBranch(
 ): Promise<BranchInfo> {
   const { owner, repo } = context.repository;
   const entityNumber = context.entityNumber;
-  const { baseBranch, branchPrefix } = context.inputs;
+  const { baseBranch, branch, branchPrefix } = context.inputs;
   const isPR = context.isPR;
+
+  // If a specific branch is provided, use it directly
+  if (branch) {
+    console.log(`Using provided branch: ${branch}`);
+    
+    // Check if the branch exists remotely
+    try {
+      await octokits.rest.repos.getBranch({
+        owner,
+        repo,
+        branch,
+      });
+      console.log(`Branch ${branch} exists remotely`);
+    } catch (error: any) {
+      if (error.status === 404) {
+        throw new Error(`Specified branch '${branch}' does not exist in the repository`);
+      }
+      throw error;
+    }
+
+    // Fetch and checkout the specified branch
+    await $`git fetch origin ${branch}`;
+    await $`git checkout ${branch}`;
+    
+    console.log(`Successfully checked out existing branch: ${branch}`);
+    
+    // For existing branches, we need to determine the base branch
+    // Try to get it from the branch's tracking information or use default
+    let detectedBaseBranch: string;
+    if (baseBranch) {
+      detectedBaseBranch = baseBranch;
+    } else {
+      // Get the default branch as fallback
+      const repoResponse = await octokits.rest.repos.get({
+        owner,
+        repo,
+      });
+      detectedBaseBranch = repoResponse.data.default_branch;
+    }
+
+    return {
+      baseBranch: detectedBaseBranch,
+      currentBranch: branch,
+    };
+  }
 
   if (isPR) {
     const prData = githubData.contextData as GitHubPullRequest;
@@ -134,8 +179,11 @@ export async function setupBranch(
     // Create and checkout the new branch locally
     await $`git checkout -b ${newBranch}`;
 
+    // Push the new branch to remote
+    await $`git push -u origin ${newBranch}`;
+
     console.log(
-      `Successfully created and checked out local branch: ${newBranch}`,
+      `Successfully created, checked out, and pushed local branch: ${newBranch}`,
     );
 
     // Set outputs for GitHub Actions

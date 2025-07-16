@@ -91,6 +91,7 @@ jobs:
 | `claude_code_oauth_token` | Claude Code OAuth token (alternative to anthropic_api_key)                                                           | No\*     | -         |
 | `direct_prompt`           | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)                | No       | -         |
 | `base_branch`             | The base branch to use for creating new branches (e.g., 'main', 'develop')                                           | No       | -         |
+| `branch`                  | Existing branch for Claude to work on (if not provided, a new branch will be created)                                | No       | -         |
 | `max_turns`               | Maximum number of conversation turns Claude can take (limits back-and-forth exchanges)                               | No       | -         |
 | `timeout_minutes`         | Timeout in minutes for execution                                                                                     | No       | `30`      |
 | `use_sticky_comment`      | Use just one comment to deliver PR comments (only applies for pull_request event workflows)                          | No       | `false`   |
@@ -112,6 +113,43 @@ jobs:
 | `additional_permissions`  | Additional permissions to enable. Currently supports 'actions: read' for viewing workflow results                    | No       | ""        |
 
 \*Required when using direct Anthropic API (default and when not using Bedrock or Vertex)
+
+## Outputs
+
+This action provides several outputs that can be used by subsequent workflow steps:
+
+| Output         | Description                                                                    |
+| -------------- | ------------------------------------------------------------------------------ |
+| `execution_file` | Path to the Claude Code execution output file containing detailed logs       |
+| `branch_name`    | The branch created by Claude Code for this execution (if a new branch was created) |
+| `claude_*`       | Dynamic outputs set by Claude using structured output tools (see below)     |
+
+### Structured Outputs
+
+Claude can set custom outputs that subsequent workflow steps can use. These outputs are prefixed with `claude_` to avoid conflicts:
+
+```yaml
+- name: Run Claude
+  id: claude-step
+  uses: anthropics/claude-code-action@beta
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    # ... other inputs
+
+- name: Use Claude's outputs
+  run: |
+    echo "File created: ${{ steps.claude-step.outputs.claude_file_path }}"
+    echo "Status: ${{ steps.claude-step.outputs.claude_status }}"
+    echo "PR URL: ${{ steps.claude-step.outputs.claude_pr_url }}"
+```
+
+Claude can create these outputs when users request specific information to be passed to subsequent actions. For example:
+
+- **@claude create a new component and output the file path** → `claude_file_path`
+- **@claude run tests and output the result status** → `claude_status`  
+- **@claude create a PR and output the URL** → `claude_pr_url`
+
+The specific outputs depend on what the user requests and what Claude accomplishes during execution.
 
 > **Note**: This action is currently in beta. Features and APIs may change as we continue to improve the integration.
 
@@ -249,6 +287,23 @@ Upload a screenshot of a bug and ask Claude to fix it:
 ```
 
 Claude can see and analyze images, making it easy to fix visual bugs or UI issues.
+
+#### Work on Existing Branches
+
+You can specify an existing branch for Claude to work on instead of creating a new one:
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    branch: "feature/user-authentication"  # Work on existing branch
+    # ... other inputs
+```
+
+This is useful for:
+- Continuing work on feature branches
+- Making changes to specific development branches  
+- Working within established branch workflows
 
 ### Custom Automations
 

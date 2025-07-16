@@ -87,6 +87,19 @@ export async function prepareMcpConfig(
       },
     };
 
+    // Always include structured outputs server for setting action outputs
+    baseMcpConfig.mcpServers.structured_outputs = {
+      command: "bun",
+      args: [
+        "run",
+        `${process.env.GITHUB_ACTION_PATH}/src/mcp/structured-outputs-server.ts`,
+      ],
+      env: {
+        GITHUB_OUTPUT: process.env.GITHUB_OUTPUT || "",
+        RUNNER_TEMP: process.env.RUNNER_TEMP || "/tmp",
+      },
+    };
+
     // Include file ops server when commit signing is enabled
     if (context.inputs.useCommitSigning) {
       baseMcpConfig.mcpServers.github_file_ops = {
