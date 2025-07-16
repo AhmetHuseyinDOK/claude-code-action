@@ -68,8 +68,13 @@ export async function setupBranch(
       detectedBaseBranch = repoResponse.data.default_branch;
     }
 
+    // Set outputs for GitHub Actions
+    core.setOutput("CLAUDE_BRANCH", branch);
+    core.setOutput("BASE_BRANCH", detectedBaseBranch);
+    
     return {
       baseBranch: detectedBaseBranch,
+      claudeBranch: branch,
       currentBranch: branch,
     };
   }
