@@ -63,11 +63,8 @@ async function run() {
       triggerUsername: context.actor,
     });
 
-    // Step 8: Setup branch
-    const branchInfo = await setupBranch(octokit, githubData, context);
-
-    // Step 9: Configure git authentication if not using commit signing
-    if (!context.inputs.useCommitSigning) {
+    // Step 8: Configure git authentication early if using existing branch or not using commit signing
+    if (!context.inputs.useCommitSigning || context.inputs.branch) {
       try {
         await configureGitAuth(githubToken, context, commentData.user);
       } catch (error) {
@@ -75,6 +72,9 @@ async function run() {
         throw error;
       }
     }
+
+    // Step 9: Setup branch
+    const branchInfo = await setupBranch(octokit, githubData, context);
 
     // Step 10: Create prompt file
     await createPrompt(
