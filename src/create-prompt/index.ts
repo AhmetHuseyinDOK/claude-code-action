@@ -42,7 +42,7 @@ export function buildAllowedToolsString(
 
   // Always include the comment update tool from the comment server
   baseTools.push("mcp__github_comment__update_claude_comment");
-  
+
   // Always include structured outputs tools
   baseTools.push("mcp__structured_outputs__set_action_output");
   baseTools.push("mcp__structured_outputs__set_multiple_action_outputs");

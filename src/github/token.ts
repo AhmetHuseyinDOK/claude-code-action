@@ -52,6 +52,33 @@ async function exchangeForAppToken(oidcToken: string): Promise<string> {
   return appToken;
 }
 
+export async function refreshGitHubToken(): Promise<string> {
+  try {
+    // Check if GitHub token was provided as override
+    const providedToken = process.env.OVERRIDE_GITHUB_TOKEN;
+
+    if (providedToken) {
+      console.log("Using provided GITHUB_TOKEN for authentication (refresh)");
+      return providedToken;
+    }
+
+    console.log("Refreshing OIDC token...");
+    const oidcToken = await retryWithBackoff(() => getOidcToken());
+    console.log("OIDC token successfully refreshed");
+
+    console.log("Exchanging OIDC token for fresh app token...");
+    const appToken = await retryWithBackoff(() =>
+      exchangeForAppToken(oidcToken),
+    );
+    console.log("Fresh app token successfully obtained");
+
+    return appToken;
+  } catch (error) {
+    console.error(`Failed to refresh GitHub token: ${error}`);
+    throw error;
+  }
+}
+
 export async function setupGitHubToken(): Promise<string> {
   try {
     // Check if GitHub token was provided as override

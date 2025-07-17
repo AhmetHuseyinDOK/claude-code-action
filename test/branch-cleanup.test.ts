@@ -2,6 +2,7 @@ import { describe, test, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { checkAndCommitOrDeleteBranch } from "../src/github/operations/branch-cleanup";
 import type { Octokits } from "../src/github/api/client";
 import { GITHUB_SERVER_URL } from "../src/github/api/config";
+import type { ParsedGitHubContext } from "../src/github/context";
 
 describe("checkAndCommitOrDeleteBranch", () => {
   let consoleLogSpy: any;
@@ -50,6 +51,22 @@ describe("checkAndCommitOrDeleteBranch", () => {
     } as any as Octokits;
   };
 
+  const mockContext: ParsedGitHubContext = {
+    repository: {
+      owner: "owner",
+      repo: "repo",
+    },
+    entityNumber: 1,
+    isPR: false,
+    inputs: {
+      triggerPhrase: "@claude",
+      baseBranch: "main",
+      branch: undefined,
+      branchPrefix: "claude/",
+      useCommitSigning: false,
+    },
+  } as any;
+
   test("should return no branch link and not delete when branch is undefined", async () => {
     const mockOctokit = createMockOctokit();
     const result = await checkAndCommitOrDeleteBranch(
@@ -59,6 +76,7 @@ describe("checkAndCommitOrDeleteBranch", () => {
       undefined,
       "main",
       false,
+      mockContext,
     );
 
     expect(result.shouldDeleteBranch).toBe(false);
@@ -75,6 +93,7 @@ describe("checkAndCommitOrDeleteBranch", () => {
       "claude/issue-123-20240101-1234",
       "main",
       true, // commit signing enabled
+      mockContext,
     );
 
     expect(result.shouldDeleteBranch).toBe(true);
@@ -93,6 +112,7 @@ describe("checkAndCommitOrDeleteBranch", () => {
       "claude/issue-123-20240101-1234",
       "main",
       false,
+      mockContext,
     );
 
     expect(result.shouldDeleteBranch).toBe(false);
@@ -126,6 +146,7 @@ describe("checkAndCommitOrDeleteBranch", () => {
       "claude/issue-123-20240101-1234",
       "main",
       false,
+      mockContext,
     );
 
     expect(result.shouldDeleteBranch).toBe(false);
@@ -149,6 +170,7 @@ describe("checkAndCommitOrDeleteBranch", () => {
       "claude/issue-123-20240101-1234",
       "main",
       true, // commit signing enabled - will try to delete
+      mockContext,
     );
 
     expect(result.shouldDeleteBranch).toBe(true);
@@ -173,6 +195,7 @@ describe("checkAndCommitOrDeleteBranch", () => {
       "claude/issue-123-20240101-1234",
       "main",
       false,
+      mockContext,
     );
 
     expect(result.shouldDeleteBranch).toBe(false);

@@ -1,6 +1,8 @@
 import type { Octokits } from "../api/client";
 import { GITHUB_SERVER_URL } from "../api/config";
 import { $ } from "bun";
+import { withTokenRefresh } from "./token-refresh";
+import type { ParsedGitHubContext } from "../context";
 
 export async function checkAndCommitOrDeleteBranch(
   octokit: Octokits,
@@ -9,7 +11,10 @@ export async function checkAndCommitOrDeleteBranch(
   claudeBranch: string | undefined,
   baseBranch: string,
   useCommitSigning: boolean,
+  context: ParsedGitHubContext,
 ): Promise<{ shouldDeleteBranch: boolean; branchLink: string }> {
+  // Track token refresh time
+  const lastRefreshTime = { value: Date.now() };
   let branchLink = "";
   let shouldDeleteBranch = false;
 
@@ -72,8 +77,13 @@ export async function checkAndCommitOrDeleteBranch(
               const commitMessage = `Auto-commit: Save uncommitted changes from Claude\n\nRun ID: ${runId}`;
               await $`git commit -m ${commitMessage}`;
 
-              // Push the changes
-              await $`git push origin ${claudeBranch}`;
+              // Push the changes with token refresh
+              await withTokenRefresh(
+                () => $`git push origin ${claudeBranch}`,
+                context,
+                null,
+                lastRefreshTime,
+              );
 
               console.log(
                 "✅ Successfully committed and pushed uncommitted changes",

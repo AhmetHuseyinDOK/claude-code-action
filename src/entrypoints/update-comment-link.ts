@@ -97,6 +97,7 @@ async function run() {
         claudeBranch,
         baseBranch,
         useCommitSigning,
+        context,
       );
 
     // Check if we need to add PR URL when we have a new branch

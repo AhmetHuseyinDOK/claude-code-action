@@ -12,6 +12,7 @@ import type { ParsedGitHubContext } from "../context";
 import type { GitHubPullRequest } from "../types";
 import type { Octokits } from "../api/client";
 import type { FetchDataResult } from "../data/fetcher";
+import { withTokenRefresh } from "./token-refresh";
 
 export type BranchInfo = {
   baseBranch: string;
@@ -24,6 +25,8 @@ export async function setupBranch(
   githubData: FetchDataResult,
   context: ParsedGitHubContext,
 ): Promise<BranchInfo> {
+  // Track token refresh time
+  const lastRefreshTime = { value: Date.now() };
   const { owner, repo } = context.repository;
   const entityNumber = context.entityNumber;
   const { baseBranch, branch, branchPrefix } = context.inputs;
@@ -32,7 +35,7 @@ export async function setupBranch(
   // If a specific branch is provided, use it directly
   if (branch) {
     console.log(`Using provided branch: ${branch}`);
-    
+
     // Check if the branch exists remotely
     try {
       await octokits.rest.repos.getBranch({
@@ -43,17 +46,24 @@ export async function setupBranch(
       console.log(`Branch ${branch} exists remotely`);
     } catch (error: any) {
       if (error.status === 404) {
-        throw new Error(`Specified branch '${branch}' does not exist in the repository`);
+        throw new Error(
+          `Specified branch '${branch}' does not exist in the repository`,
+        );
       }
       throw error;
     }
 
-    // Fetch and checkout the specified branch
-    await $`git fetch origin ${branch}`;
+    // Fetch and checkout the specified branch with token refresh
+    await withTokenRefresh(
+      () => $`git fetch origin ${branch}`,
+      context,
+      null,
+      lastRefreshTime,
+    );
     await $`git checkout ${branch}`;
-    
+
     console.log(`Successfully checked out existing branch: ${branch}`);
-    
+
     // For existing branches, we need to determine the base branch
     // Try to get it from the branch's tracking information or use default
     let detectedBaseBranch: string;
@@ -71,7 +81,7 @@ export async function setupBranch(
     // Set outputs for GitHub Actions
     core.setOutput("CLAUDE_BRANCH", branch);
     core.setOutput("BASE_BRANCH", detectedBaseBranch);
-    
+
     return {
       baseBranch: detectedBaseBranch,
       claudeBranch: branch,
@@ -104,7 +114,12 @@ export async function setupBranch(
       );
 
       // Execute git commands to checkout PR branch (dynamic depth based on PR size)
-      await $`git fetch origin --depth=${fetchDepth} ${branchName}`;
+      await withTokenRefresh(
+        () => $`git fetch origin --depth=${fetchDepth} ${branchName}`,
+        context,
+        null,
+        lastRefreshTime,
+      );
       await $`git checkout ${branchName}`;
 
       console.log(`Successfully checked out PR branch for PR #${entityNumber}`);
@@ -184,8 +199,13 @@ export async function setupBranch(
     // Create and checkout the new branch locally
     await $`git checkout -b ${newBranch}`;
 
-    // Push the new branch to remote
-    await $`git push -u origin ${newBranch}`;
+    // Push the new branch to remote with token refresh
+    await withTokenRefresh(
+      () => $`git push -u origin ${newBranch}`,
+      context,
+      null,
+      lastRefreshTime,
+    );
 
     console.log(
       `Successfully created, checked out, and pushed local branch: ${newBranch}`,

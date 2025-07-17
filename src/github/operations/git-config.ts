@@ -54,3 +54,28 @@ export async function configureGitAuth(
 
   console.log("Git authentication configured successfully");
 }
+
+/**
+ * Reconfigure git authentication with a fresh token
+ * This is a lighter version of configureGitAuth that only updates the token
+ */
+export async function reconfigureGitToken(
+  githubToken: string,
+  context: ParsedGitHubContext,
+) {
+  console.log("Reconfiguring git authentication with fresh token...");
+
+  // Remove existing authentication headers
+  try {
+    await $`git config --unset-all http.${GITHUB_SERVER_URL}/.extraheader`;
+  } catch (e) {
+    // Ignore if no headers exist
+  }
+
+  // Update the remote URL with the fresh token
+  const serverUrl = new URL(GITHUB_SERVER_URL);
+  const remoteUrl = `https://x-access-token:${githubToken}@${serverUrl.host}/${context.repository.owner}/${context.repository.repo}.git`;
+  await $`git remote set-url origin ${remoteUrl}`;
+
+  console.log("✓ Git authentication reconfigured with fresh token");
+}
